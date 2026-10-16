@@ -19,7 +19,10 @@
     "test:auth": "npm run build && npm run build:functions && firebase emulators:exec --only auth,functions,hosting --project demo-flowboard \"node --test tests/auth.test.mjs tests/callables.test.mjs tests/hosting.test.mjs\"",
     "test:ui": "playwright test --project demo --project built",
     "format:check": "prettier --check src functions/src tests scripts/*.mjs",
-    "dev:demo": "node scripts/dev-mode.mjs demo"
+    "dev:demo": "node scripts/dev-mode.mjs demo",
+    "dev:local": "node scripts/dev-mode.mjs demo",
+    "build:local": "node scripts/build-local.mjs",
+    "preview:local": "vite preview --host 0.0.0.0 --outDir artifacts/local-dist"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

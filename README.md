@@ -1,5 +1,16 @@
 # Flowboard — 팀 협업 칸반보드
 
+## Firebase 없이 바로 사용하기
+
+```bash
+npm ci
+npm run dev:local
+```
+
+로그인이나 Firebase 설정 없이 바로 보드가 열립니다. 카드와 변경사항은 현재 브라우저의 localStorage에 저장됩니다. 다른 사용자·기기와의 공유, 실제 팀원 인증·초대·실시간 동기화는 제공하지 않습니다. 브라우저 사이트 데이터를 지우면 저장한 내용도 삭제되므로 주의하세요.
+
+정적 호스팅용 파일은 `npm run build:local`로 생성합니다. `artifacts/local-dist` 폴더를 정적 호스팅에 업로드하면 됩니다. 이 명령은 기존 Firebase 환경 변수가 있어도 Firebase 연결을 끕니다. `npm run preview:local`로 빌드 결과를 실행할 수 있습니다.
+
 React 19 / TypeScript / Vite / Firebase Auth·Firestore·Functions·Hosting 기반의 6~30명 팀용 협업 보드입니다. Coral Orange `#F97316`와 고정 4개 상태(To Do, In Progress, Done, Issue)를 유지합니다.
 
 ## 개발 시작

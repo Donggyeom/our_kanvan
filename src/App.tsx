@@ -322,6 +322,14 @@ function AuthScreen({
     e.preventDefault();
     setBusy(true);
     await onAction(async () => {
+      if (mode === "register" && sharedEnabled) {
+        if (!new URLSearchParams(location.search).get("invite"))
+          throw Error(
+            "회원가입에는 초대 링크가 필요합니다. 관리자에게 초대 링크를 받아 그 링크에서 가입해 주세요.",
+          );
+        if (!name.trim()) throw Error("이름을 입력해 주세요.");
+        if (pw.length < 10) throw Error("비밀번호는 10자 이상 입력해 주세요.");
+      }
       if (mode === "login") await backend.login(email, pw);
       if (mode === "register") await backend.register(name, email, pw);
       if (mode === "reset") {
@@ -413,7 +421,11 @@ function AuthScreen({
                 type="password"
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
-                placeholder="비밀번호를 입력하세요"
+                placeholder={
+                  sharedEnabled
+                    ? "10자 이상 입력하세요"
+                    : "비밀번호를 입력하세요"
+                }
               />
             </label>
           )}
@@ -430,6 +442,13 @@ function AuthScreen({
             <p className="demo-note">
               데모 모드: demo@flowboard.app 으로 로그인하세요. 비밀번호는
               필요하지 않습니다.
+            </p>
+          )}
+          {sharedEnabled && mode === "register" && (
+            <p className="demo-note">
+              {new URLSearchParams(location.search).get("invite")
+                ? "초대받은 이메일로 가입하세요. 비밀번호는 10자 이상이어야 합니다."
+                : "관리자에게 초대 링크를 받아 해당 링크에서 가입해 주세요. 일반 접속 주소에서는 가입할 수 없습니다."}
             </p>
           )}
           <div className="auth-links">

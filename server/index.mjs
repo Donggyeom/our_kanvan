@@ -263,6 +263,17 @@ async function rpc(req, res, body) {
     loginSession(user.id);
   } else if (method === "register") {
     limited(req);
+    if (typeof args[3] !== "string" || !args[3].trim())
+      throw fail(
+        "회원가입에는 초대 링크가 필요합니다. 관리자에게 초대 링크를 받아 그 링크에서 가입해 주세요.",
+        403,
+      );
+    if (
+      typeof args[0] !== "string" ||
+      !args[0].trim() ||
+      args[0].trim().length > 40
+    )
+      throw fail("이름을 1~40자로 입력해 주세요.");
     const name = string(args[0], 40),
       address = email(args[1]);
     text(args[2], 1024);

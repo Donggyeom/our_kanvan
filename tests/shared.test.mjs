@@ -356,3 +356,33 @@ test("invitation link completes real browser signup and joins the shared board",
     await browser.close();
   }
 });
+
+test("signup without an invitation explains the missing link in the browser", async () => {
+  const browser = await chromium.launch({
+    executablePath: "/usr/bin/chromium",
+    headless: true,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.goto(origin);
+    await page.getByRole("button", { name: "회원가입", exact: true }).click();
+    await expect(
+      page.getByText(
+        "관리자에게 초대 링크를 받아 해당 링크에서 가입해 주세요. 일반 접속 주소에서는 가입할 수 없습니다.",
+      ),
+    ).toBeVisible();
+    await page.getByLabel("이름", { exact: true }).fill("가입 안내 검증");
+    await page
+      .getByLabel("이메일", { exact: true })
+      .fill("no-invite@example.com");
+    await page.getByLabel("비밀번호", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "회원가입", exact: true }).click();
+    await expect(
+      page.getByText(
+        "회원가입에는 초대 링크가 필요합니다. 관리자에게 초대 링크를 받아 그 링크에서 가입해 주세요.",
+      ),
+    ).toBeVisible();
+  } finally {
+    await browser.close();
+  }
+});

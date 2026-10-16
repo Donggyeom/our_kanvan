@@ -480,6 +480,8 @@ function TaskModal({
   boardId,
   people,
   history,
+  messages,
+  userId,
   onClose,
   onReload,
   onAction,
@@ -491,6 +493,8 @@ function TaskModal({
   boardId: string;
   people: User[];
   history: Snapshot["history"];
+  messages: NonNullable<Snapshot["messages"]>;
+  userId: string;
   onClose: () => void;
   onAction: (f: () => Promise<void>) => Promise<void>;
   isAdmin: boolean;
@@ -507,7 +511,43 @@ function TaskModal({
         }
       : blank,
   );
-  const [tab, setTab] = useState<"details" | "history">("details");
+  const [tab, setTab] = useState<"details" | "history" | "chat">("details");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const messageRequest = useRef<{ text: string; id: string } | null>(null);
+  const chatList = useRef<HTMLDivElement>(null);
+  const taskMessages = messages.filter((m) => m.taskId === task?.id);
+  const savedTask = latestTask || task;
+  const chatVisible =
+    !!backend.sendMessage &&
+    !!task &&
+    (savedTask?.status === "issue" || taskMessages.length > 0);
+  const canSend =
+    savedTask?.status === "issue" &&
+    !savedTask.deletedAt &&
+    !savedTask.isArchived;
+  useEffect(() => {
+    if (tab === "chat" && chatList.current)
+      chatList.current.scrollTop = chatList.current.scrollHeight;
+  }, [tab, taskMessages.length]);
+  async function sendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!task || !backend.sendMessage || sending || !message.trim()) return;
+    const text = message.trim();
+    if (messageRequest.current?.text !== text)
+      messageRequest.current = { text, id: crypto.randomUUID() };
+    const request = messageRequest.current!;
+    setSending(true);
+    try {
+      await onAction(async () => {
+        await backend.sendMessage!(task.id, text, request.id);
+        setMessage("");
+        messageRequest.current = null;
+      });
+    } finally {
+      setSending(false);
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const update = <K extends keyof TaskInput>(key: K, value: TaskInput[K]) => {
@@ -515,7 +555,11 @@ function TaskModal({
     setDirty(true);
   };
   const close = () => {
-    if (dirty && !confirm("저장하지 않은 변경 사항을 버리시겠습니까?")) return;
+    if (
+      (dirty || message.trim()) &&
+      !confirm("저장하지 않은 변경 사항을 버리시겠습니까?")
+    )
+      return;
     onClose();
   };
   const dialogRef = useDialog(close);
@@ -572,6 +616,14 @@ function TaskModal({
               변경 이력{" "}
               <span>{history.filter((h) => h.taskId === task.id).length}</span>
             </button>
+            {chatVisible && (
+              <button
+                className={tab === "chat" ? "active" : ""}
+                onClick={() => setTab("chat")}
+              >
+                이슈 채팅 <span>{taskMessages.length}</span>
+              </button>
+            )}
           </div>
         )}
         {task && latestTask && latestTask.version !== task.version && (
@@ -724,6 +776,79 @@ function TaskModal({
               </button>
             </div>
           </form>
+        ) : tab === "chat" ? (
+          <div className="issue-chat">
+            <div
+              ref={chatList}
+              className="chat-messages"
+              role="log"
+              aria-label="이슈 채팅 메시지"
+              aria-live="polite"
+              aria-relevant="additions"
+            >
+              {!taskMessages.length && (
+                <div className="empty-state">
+                  이슈 해결을 위한 대화를 시작해 보세요.
+                </div>
+              )}
+              {taskMessages.map((m) => (
+                <div
+                  className={
+                    "chat-message" + (m.authorId === userId ? " own" : "")
+                  }
+                  key={m.id}
+                >
+                  <div className="chat-message-meta">
+                    <strong>
+                      {people.find((p) => p.id === m.authorId)?.displayName ||
+                        "팀원"}
+                    </strong>
+                    <time dateTime={m.createdAt}>{timestamp(m.createdAt)}</time>
+                  </div>
+                  <div className="chat-bubble">{m.text}</div>
+                </div>
+              ))}
+            </div>
+            {canSend ? (
+              <form className="chat-composer" onSubmit={sendMessage}>
+                <label htmlFor="issue-chat-message">메시지</label>
+                <textarea
+                  id="issue-chat-message"
+                  value={message}
+                  maxLength={2000}
+                  rows={3}
+                  placeholder="메시지를 입력하세요. Enter로 전송, Shift+Enter로 줄바꿈"
+                  disabled={sending}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      !e.shiftKey &&
+                      !e.nativeEvent.isComposing
+                    ) {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                />
+                <div className="chat-composer-actions">
+                  <small>{message.length}/2000</small>
+                  <button
+                    className="primary"
+                    disabled={sending || !message.trim()}
+                    type="submit"
+                  >
+                    {sending ? "전송 중..." : "메시지 보내기"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="chat-readonly">
+                Issue 상태의 활성 카드에서만 메시지를 보낼 수 있습니다. 이전
+                대화는 계속 확인할 수 있습니다.
+              </p>
+            )}
+          </div>
         ) : (
           <div className="history-list">
             {history
@@ -1665,6 +1790,8 @@ function App() {
         <TaskModal
           key={(editing?.id || "new") + reloadKey}
           task={editing || null}
+          messages={state.messages || []}
+          userId={state.user.id}
           latestTask={state.tasks.find((t) => t.id === editing?.id)}
           onReload={(t) => {
             setEditing(t);

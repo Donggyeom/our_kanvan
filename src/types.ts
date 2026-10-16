@@ -51,6 +51,14 @@ export interface History {
   newValue: unknown;
   createdAt: string;
 }
+export interface ChatMessage {
+  id: string;
+  taskId: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
+  clientId: string;
+}
 export interface Invitation {
   id: string;
   workspaceId: string;

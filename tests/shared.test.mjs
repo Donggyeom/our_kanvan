@@ -386,3 +386,225 @@ test("signup without an invitation explains the missing link in the browser", as
     await browser.close();
   }
 });
+
+let chatTask;
+test("issue chat stores concurrent messages, server authors, and retry deduplication", async () => {
+  const board = (await admin.snapshot()).boards[0];
+  const created = await admin.rpc("createTask", [
+    board.id,
+    {
+      title: "채팅 검증 이슈",
+      description: "",
+      assigneeId: null,
+      status: "issue",
+      priority: "high",
+      dueDate: null,
+    },
+  ]);
+  assert.equal(created.status, 200);
+  chatTask = created.snapshot.tasks.find((t) => t.title === "채팅 검증 이슈");
+  const key = crypto.randomUUID();
+  const results = await Promise.all([
+    admin.rpc("sendMessage", [chatTask.id, "관리자 메시지", key]),
+    member.rpc("sendMessage", [
+      chatTask.id,
+      "팀원 메시지",
+      crypto.randomUUID(),
+    ]),
+  ]);
+  assert.deepEqual(
+    results.map((r) => r.status),
+    [200, 200],
+  );
+  assert.equal(
+    (await admin.rpc("sendMessage", [chatTask.id, "관리자 메시지", key]))
+      .status,
+    200,
+  );
+  const snap = await member.snapshot();
+  const messages = snap.messages.filter((m) => m.taskId === chatTask.id);
+  assert.equal(messages.length, 2);
+  assert.equal(new Set(messages.map((m) => m.authorId)).size, 2);
+  assert.equal(
+    snap.tasks.find((t) => t.id === chatTask.id).version,
+    chatTask.version,
+  );
+  assert.equal(
+    (
+      await admin.rpc("sendMessage", [
+        chatTask.id,
+        "forged",
+        crypto.randomUUID(),
+        "fake-author",
+      ])
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await admin.rpc("sendMessage", [chatTask.id, "  ", crypto.randomUUID()]))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await admin.rpc("sendMessage", [
+        chatTask.id,
+        "a".repeat(2001),
+        crypto.randomUUID(),
+      ])
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await client().rpc("sendMessage", [
+        chatTask.id,
+        "anonymous",
+        crypto.randomUUID(),
+      ])
+    ).status,
+    401,
+  );
+});
+
+test("chat is limited to active Issue cards and revoked board members cannot read or write", async () => {
+  const snap = await admin.snapshot();
+  const board = snap.boards.find((b) => b.id === chatTask.boardId);
+  assert.equal(
+    (
+      await admin.rpc("updateTask", [
+        chatTask.id,
+        chatTask.version,
+        { status: "done" },
+      ])
+    ).status,
+    200,
+  );
+  assert.notEqual(
+    (
+      await member.rpc("sendMessage", [
+        chatTask.id,
+        "closed",
+        crypto.randomUUID(),
+      ])
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await member.snapshot()).messages.filter((m) => m.taskId === chatTask.id)
+      .length,
+    2,
+  );
+  assert.equal(
+    (
+      await admin.rpc("updateTask", [
+        chatTask.id,
+        chatTask.version + 1,
+        { status: "issue" },
+      ])
+    ).status,
+    200,
+  );
+  const user = (await member.snapshot()).user;
+  assert.equal(
+    (
+      await admin.rpc("updateBoard", [
+        board.id,
+        { memberIds: board.memberIds.filter((id) => id !== user.id) },
+      ])
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await member.snapshot()).messages.filter((m) => m.taskId === chatTask.id)
+      .length,
+    0,
+  );
+  assert.notEqual(
+    (
+      await member.rpc("sendMessage", [
+        chatTask.id,
+        "blocked",
+        crypto.randomUUID(),
+      ])
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await admin.rpc("updateBoard", [board.id, { memberIds: board.memberIds }]))
+      .status,
+    200,
+  );
+});
+
+test("issue messages survive server restart", async () => {
+  const before = (await admin.snapshot()).messages;
+  await stop();
+  await start();
+  assert.deepEqual((await admin.snapshot()).messages, before);
+});
+
+test("two browsers chat live, preserve failed drafts, render text safely, and fit mobile", async () => {
+  const browser = await chromium.launch({
+    executablePath: "/usr/bin/chromium",
+    headless: true,
+  });
+  try {
+    const a = await browser.newPage(),
+      b = await browser.newPage();
+    for (const [page, email] of [
+      [a, "owner@example.com"],
+      [b, "member@example.com"],
+    ]) {
+      await page.goto(origin);
+      await page.getByLabel("이메일", { exact: true }).fill(email);
+      await page.getByLabel("비밀번호", { exact: true }).fill(password);
+      await page.getByRole("button", { name: "로그인", exact: true }).click();
+      await page
+        .getByRole("button", { name: "채팅 검증 이슈", exact: true })
+        .click();
+      await page.getByRole("button", { name: /이슈 채팅/ }).click();
+      await expect(page.getByRole("log")).toContainText("팀원 메시지");
+    }
+    await a
+      .getByLabel("메시지", { exact: true })
+      .fill("함께 이슈를 해결합시다");
+    await a.getByLabel("메시지", { exact: true }).press("Enter");
+    await expect(b.getByRole("log")).toContainText("함께 이슈를 해결합시다", {
+      timeout: 5000,
+    });
+    const text = "<img src=x onerror=alert(1)> 일반 텍스트";
+    await b.getByLabel("메시지", { exact: true }).fill(text);
+    await b.getByRole("button", { name: "메시지 보내기", exact: true }).click();
+    await expect(a.getByRole("log")).toContainText(text, { timeout: 5000 });
+    assert.equal(await a.getByRole("log").locator("img").count(), 0);
+    await b.route("**/api/rpc", (route) => route.abort());
+    await b.getByLabel("메시지", { exact: true }).fill("실패한 전송 내용 유지");
+    await b.getByRole("button", { name: "메시지 보내기", exact: true }).click();
+    await expect(
+      b.getByRole("button", { name: "메시지 보내기", exact: true }),
+    ).toBeEnabled();
+    await expect(b.getByLabel("메시지", { exact: true })).toHaveValue(
+      "실패한 전송 내용 유지",
+    );
+    await b.unroute("**/api/rpc");
+    await b.getByRole("button", { name: "메시지 보내기", exact: true }).click();
+    await expect(a.getByRole("log")).toContainText("실패한 전송 내용 유지", {
+      timeout: 5000,
+    });
+    for (const width of [390, 768, 1280]) {
+      await b.setViewportSize({ width, height: 900 });
+      assert.ok(
+        await b.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      );
+      await b.screenshot({
+        path: `artifacts/chat-${width}.png`,
+        fullPage: true,
+      });
+    }
+  } finally {
+    await browser.close();
+  }
+});

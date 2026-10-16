@@ -6,6 +6,7 @@ import type {
   TaskInput,
   User,
   Status,
+  ChatMessage,
 } from "./types";
 import { DemoBackend } from "./local-backend";
 import { createSharedBackend } from "./shared-backend";
@@ -27,6 +28,7 @@ export interface Snapshot {
   people: User[];
   history: History[];
   invitations: Invitation[];
+  messages?: ChatMessage[];
   loading: boolean;
   error: string | null;
   workspaceName?: string;
@@ -65,6 +67,11 @@ export interface Backend {
   invite: (email: string) => Promise<string>;
   revokeInvite: (id: string) => Promise<void>;
   acceptInvite: (token: string) => Promise<void>;
+  sendMessage?: (
+    taskId: string,
+    text: string,
+    clientId: string,
+  ) => Promise<void>;
 }
 // Convert Firestore timestamps at the boundary; UI models use ISO strings.
 function value<T>(id: string, data: Record<string, unknown>): T {

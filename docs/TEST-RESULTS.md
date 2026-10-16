@@ -1,3 +1,11 @@
+# 이슈 채팅 추가 검증
+
+최종 `npm run verify` 통과: 총 74개(단위 11 + 공유 서버 16 + 기존 Emulator 27 + 브라우저 20). TypeScript·빌드도 성공했습니다. 기록은 `artifacts/chat-full-verification.log`, 소스 해시 증명은 `artifacts/verification.json`입니다.
+
+이슈 채팅의 동시 전송·재시도 중복 방지·작성자 강제·입력 제한·상태 및 권한 검사·서버 재시작 복원을 검증했습니다. 두 실제 Chromium 사용자가 메시지를 주고받고, 실패한 전송의 초안 유지와 재전송, HTML의 일반 텍스트 표시, 390/768/1280px 화면도 확인했습니다. 임시 공개 HTTPS 주소에서도 로그인한 두 세션 간 전송·수신을 검증했습니다. 기존 계정과 데이터는 유지했습니다.
+
+아래는 이전 단계의 검증 기록입니다.
+
 # Firebase 없는 공유 서버 추가 검증
 
 최종 `npm run verify` 통과: 총 69개(단위 11 + 공유 서버 11 + 기존 Emulator 27 + 브라우저 20). TypeScript·빌드도 성공했습니다. 현재 소스 해시는 `artifacts/verification.json`, 실행 기록은 `artifacts/shared-full-verification.log`에 있습니다.

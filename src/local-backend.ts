@@ -174,6 +174,38 @@ export class DemoBackend implements Backend {
   async refresh() {
     this.emit();
   }
+  async sendMessage(taskId: string, text: string, clientId: string) {
+    const task = this.data.tasks.find((t) => t.id === taskId);
+    if (!task) throw Error("업무를 찾을 수 없습니다.");
+    this.access(task.boardId);
+    if (task.status !== "issue" || task.deletedAt || task.isArchived)
+      throw Error("진행 중인 Issue 카드에서만 메시지를 보낼 수 있습니다.");
+    if (typeof text !== "string" || !text.trim() || text.length > 2000)
+      throw Error("메시지를 1~2000자로 입력하세요.");
+    if (typeof clientId !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(clientId))
+      throw Error("메시지 요청이 올바르지 않습니다.");
+    const messages = (this.data.messages ||= []);
+    if (
+      messages.some(
+        (m) =>
+          m.taskId === taskId &&
+          m.authorId === this.actor().id &&
+          m.clientId === clientId,
+      )
+    )
+      return;
+    if (messages.filter((m) => m.taskId === taskId).length >= 5000)
+      throw Error("카드당 메시지는 최대 5000개입니다.");
+    messages.push({
+      id: uid(),
+      taskId,
+      authorId: this.actor().id,
+      text: text.trim(),
+      createdAt: now(),
+      clientId,
+    });
+    this.emit();
+  }
   private emit() {
     this.storage.setItem("flowboard-demo", JSON.stringify(this.data));
     this.listeners.forEach((fn) =>

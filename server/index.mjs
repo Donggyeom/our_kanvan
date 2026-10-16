@@ -153,6 +153,7 @@ function snapshot(data, userId) {
         (user.workspaceId && p.workspaceId === user.workspaceId),
     ),
     history: data.history.filter((h) => taskIds.has(h.taskId)),
+    messages: (data.messages || []).filter((m) => taskIds.has(m.taskId)),
     invitations:
       user.role === "admin"
         ? data.invitations.filter((i) => i.workspaceId === user.workspaceId)
@@ -220,6 +221,7 @@ const methods = new Set([
   "invite",
   "revokeInvite",
   "acceptInvite",
+  "sendMessage",
 ]);
 async function rpc(req, res, body) {
   const { method, args } = body;
@@ -349,6 +351,17 @@ async function rpc(req, res, body) {
     )
       throw fail("잘못된 요청입니다.");
     if (method === "createTask") taskInput(args[1]);
+    if (method === "sendMessage") {
+      if (
+        args.length !== 3 ||
+        typeof args[1] !== "string" ||
+        !args[1].trim() ||
+        args[1].length > 2000
+      )
+        throw fail("메시지를 1~2000자로 입력하세요.");
+      if (typeof args[2] !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(args[2]))
+        throw fail("메시지 요청이 올바르지 않습니다.");
+    }
     if (
       ["updateTask", "moveTask", "archiveTask", "deleteTask"].includes(method)
     )

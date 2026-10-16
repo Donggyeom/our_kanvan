@@ -107,6 +107,7 @@ export function createSharedBackend(): Backend {
     "invite",
     "revokeInvite",
     "acceptInvite",
+    "sendMessage",
   ] as const) {
     Object.assign(backend, {
       [method]: async (...args: unknown[]) => {

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noUnusedLocals": false, "noUnusedParameters": false },
+  "include": ["tests/*.spec.ts", "playwright.config.ts"]
+}

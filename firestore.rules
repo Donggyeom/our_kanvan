@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed() { return request.auth != null; }
+  function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+  function sameWorkspace(w) { return signed() && w != '' && me().workspaceId == w; }
+  function admin(w) { return sameWorkspace(w) && me().role == 'admin'; }
+  function boardData(b) { return sameWorkspace(b.workspaceId) && (admin(b.workspaceId) || request.auth.uid in b.memberIds); }
+  function allowedBoard(id) { let b = get(/databases/$(database)/documents/boards/$(id)).data; return b.deletedAt == null && boardData(b); }
+  match /users/{id} { allow read: if signed() && (id == request.auth.uid || sameWorkspace(resource.data.workspaceId)); allow write: if false; }
+  match /workspaces/{id} { allow read: if sameWorkspace(id); allow write: if false; }
+  // Use resource fields so workspace/member queries can be proved safe by Rules.
+  match /boards/{id} { allow read: if boardData(resource.data); allow write: if false; }
+  match /tasks/{id} { allow read: if sameWorkspace(resource.data.workspaceId) && allowedBoard(resource.data.boardId); allow write: if false; }
+  match /task_history/{id} { allow read: if sameWorkspace(resource.data.workspaceId) && allowedBoard(resource.data.boardId); allow write: if false; }
+  match /invitations/{id} { allow read: if admin(resource.data.workspaceId); allow write: if false; }
+ }
+}

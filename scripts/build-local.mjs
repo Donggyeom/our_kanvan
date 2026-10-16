@@ -4,6 +4,7 @@ import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 const env = {
   ...process.env,
   VITE_DEMO_MODE: "true",
+  VITE_SHARED_MODE: "false",
   VITE_USE_EMULATORS: "false",
 };
 for (const name of [

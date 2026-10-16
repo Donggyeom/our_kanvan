@@ -5,6 +5,7 @@ if (!["demo", "emulator"].includes(mode))
 const env = {
   ...process.env,
   VITE_DEMO_MODE: mode === "demo" ? "true" : "false",
+  VITE_SHARED_MODE: "false",
 };
 if (mode === "emulator")
   Object.assign(env, {

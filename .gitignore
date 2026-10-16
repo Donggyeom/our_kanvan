@@ -12,6 +12,7 @@ functions/lib
 playwright-report/
 test-results/
 artifacts/
+.data/
 .env.production
 .env.production.local
 

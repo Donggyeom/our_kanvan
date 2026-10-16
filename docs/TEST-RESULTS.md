@@ -1,3 +1,13 @@
+# Firebase 없는 공유 서버 추가 검증
+
+최종 `npm run verify` 통과: 총 69개(단위 11 + 공유 서버 11 + 기존 Emulator 27 + 브라우저 20). TypeScript·빌드도 성공했습니다. 현재 소스 해시는 `artifacts/verification.json`, 실행 기록은 `artifacts/shared-full-verification.log`에 있습니다.
+
+`npm run test:shared`: 11개 통과. 익명 접근 차단, 비밀번호 인증, 초대 해시·단일 사용, 팀원 권한 제한, 두 사용자의 카드 공유·이력, 동시 수정·이동 충돌, 보드 접근 제거, 서버 재시작 복원, 두 실제 Chromium 사용자의 화면 갱신, 실제 초대 링크 가입을 검증했습니다. 390/768/1280px 화면도 확인했습니다.
+
+Docker 이미지를 실제 빌드하고 운영 모드에서 HTTP 응답·로그인·Secure/HttpOnly 쿠키·영구 볼륨 쓰기를 검사했습니다. 컨테이너를 삭제 후 같은 테스트 볼륨으로 다시 생성하여 계정과 카드가 유지되는 것도 확인했습니다. 공개 서버 배포 및 외부 서비스의 디스크 마운트는 아직 검증하지 않았습니다.
+
+아래는 기존 Firebase·로컬 모드의 검증 기록입니다.
+
 # 실제 검증 결과 — 2026-10-16 (Asia/Seoul)
 
 검증 위치: `/workspace/our_kanvan`. Node.js 22.23.3, Java 21.0.12.1, Chromium 154.0.8037.57(시스템 브라우저), Firebase CLI 15.34.0.

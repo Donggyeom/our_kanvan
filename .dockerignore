@@ -1,0 +1,11 @@
+.git
+node_modules
+functions/node_modules
+functions/lib
+artifacts
+dist
+.data
+.env*
+playwright-report
+test-results
+*-debug.log

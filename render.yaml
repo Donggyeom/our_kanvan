@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: flowboard
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: flowboard-data
+      mountPath: /data
+      sizeGB: 1

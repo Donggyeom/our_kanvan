@@ -8,7 +8,7 @@ writeFileSync(
   path,
   JSON.stringify({ status: "running", sourceHash: startedHash }),
 );
-for (const script of ["check", "test:unit", "test:emulators"]) {
+for (const script of ["check", "test:unit", "test:shared", "test:emulators"]) {
   const result = spawnSync(
     process.platform === "win32" ? "npm.cmd" : "npm",
     ["run", script],

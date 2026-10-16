@@ -1,5 +1,9 @@
 import { spawn } from "node:child_process";
-const env = { ...process.env, VITE_DEMO_MODE: "true" };
+const env = {
+  ...process.env,
+  VITE_DEMO_MODE: "true",
+  VITE_SHARED_MODE: "false",
+};
 const vite = "node_modules/vite/bin/vite.js";
 let child = spawn(
   process.execPath,

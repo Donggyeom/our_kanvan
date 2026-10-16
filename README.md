@@ -1,5 +1,9 @@
 # Flowboard — 팀 협업 칸반보드
 
+## Firebase 없이 여러 사용자가 공유하기
+
+`npm run build:shared` 후 관리자 이메일·비밀번호를 지정하고 `npm start`를 실행하면 공용 서버에서 로그인·초대·업무 공유를 제공합니다. 약 1초 간격으로 변경을 반영하며 동시 수정 충돌을 검사합니다. 배포에는 정적 호스팅 대신 Node.js 서버와 영구 디스크가 필요합니다. [실행·배포 방법](docs/SHARED-HOSTING.md)을 참고하세요. `Dockerfile`과 Render Blueprint(`render.yaml`)도 포함했습니다.
+
 ## Firebase 없이 바로 사용하기
 
 ```bash

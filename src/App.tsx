@@ -57,6 +57,7 @@ import {
   ConflictError,
 } from "./types";
 import { firebaseEnabled } from "./firebase";
+const sharedEnabled = import.meta.env.VITE_SHARED_MODE === "true";
 const blank: TaskInput = {
   title: "",
   description: "",
@@ -313,7 +314,7 @@ function AuthScreen({
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState(
-    firebaseEnabled ? "" : "demo@flowboard.app",
+    firebaseEnabled || sharedEnabled ? "" : "demo@flowboard.app",
   );
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -407,8 +408,8 @@ function AuthScreen({
             <label>
               비밀번호
               <input
-                required={firebaseEnabled || mode !== "login"}
-                minLength={firebaseEnabled ? 6 : undefined}
+                required={firebaseEnabled || sharedEnabled || mode !== "login"}
+                minLength={sharedEnabled ? 10 : firebaseEnabled ? 6 : undefined}
                 type="password"
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
@@ -425,7 +426,7 @@ function AuthScreen({
                   ? "회원가입"
                   : "재설정 메일 보내기"}
           </button>
-          {!firebaseEnabled && (
+          {!firebaseEnabled && !sharedEnabled && (
             <p className="demo-note">
               데모 모드: demo@flowboard.app 으로 로그인하세요. 비밀번호는
               필요하지 않습니다.
@@ -1097,7 +1098,8 @@ function App() {
             <span>
               <b>{state.user.displayName}</b>
               <small>
-                {admin ? "관리자" : "팀원"} {firebaseEnabled ? "" : "· 데모"}
+                {admin ? "관리자" : "팀원"}{" "}
+                {firebaseEnabled || sharedEnabled ? "" : "· 데모"}
               </small>
             </span>
             <button
@@ -1147,10 +1149,12 @@ function App() {
               <span />{" "}
               {pending
                 ? "저장 중..."
-                : !firebaseEnabled
+                : !firebaseEnabled && !sharedEnabled
                   ? "데모 모드"
                   : state.connection === "connected"
-                    ? "실시간 연결"
+                    ? sharedEnabled
+                      ? "서버 연결"
+                      : "실시간 연결"
                     : state.connection === "offline"
                       ? "연결 끊김"
                       : "다시 연결 중..."}

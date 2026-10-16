@@ -17,6 +17,9 @@ export function sourceHash() {
     "tsconfig.tests.json",
     "functions/tsconfig.json",
     "playwright.config.ts",
+    "Dockerfile",
+    ".dockerignore",
+    "render.yaml",
   ];
   const walk = (path) => {
     for (const name of readdirSync(path).sort()) {
@@ -25,7 +28,8 @@ export function sourceHash() {
       else files.push(file);
     }
   };
-  for (const path of ["src", "functions/src", "tests", "scripts"]) walk(path);
+  for (const path of ["src", "functions/src", "tests", "scripts", "server"])
+    walk(path);
   const hash = createHash("sha256");
   for (const file of files.sort()) {
     hash.update(file);
